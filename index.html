@@ -1,56 +1,47 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>Xpend — Daily Tracker</title>
-<link rel="manifest" href="/manifest.json">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  /* Keep your existing CSS here */
-  :root{--bg0:#07090f;--t0:#eef2ff;}
-  body{background:var(--bg0);color:var(--t0);font-family:sans-serif;}
-</style>
-</head>
-<body>
-
-<div id="app"></div>
-
 <script>
 // 1. INITIALIZE SUPABASE
 const SUPABASE_URL = 'https://fydijvhjvukyrqcxacau.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ5ZGlqdmhqdnVreXJxY3hhY2F1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5NjU2NzIsImV4cCI6MjA5MzU0MTY3Mn0.Ef2ZLxU3G9p2UHRxsRrkWyLi9-nrrrjDmumXyjO7lsw';
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  // 2. REPLACED API FUNCTION
-  // This acts as a bridge. Now it talks to Supabase instead of your local Docker container.
-  async function api(method, path, body) {
-    try {
-      if (path === '/api/expenses') {
-        if (method === 'GET') {
-          const { data, error } = await supabase.from('expenses').select('*');
-          if (error) throw error;
-          return data;
-        }
-        if (method === 'POST') {
-          const { data, error } = await supabase.from('expenses').insert(body);
-          if (error) throw error;
-          return data;
-        }
+// 2. SECURE API BRIDGE
+// This function now automatically attaches your user_id to any new expenses,
+// satisfying your Row Level Security (RLS) policies.
+async function api(method, path, body) {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (path === '/api/expenses') {
+      if (method === 'GET') {
+        // Supabase RLS automatically filters results to only show YOUR data
+        const { data, error } = await supabase.from('expenses').select('*');
+        if (error) throw error;
+        return data;
       }
-      // Add other routes here (e.g., /api/login, /api/share-requests)
-      console.log("Supabase API called for:", path);
-    } catch (err) {
-      console.error("API Error:", err);
-      throw err;
+      
+      if (method === 'POST') {
+        // We inject the user_id from the session to ensure RLS allows the insert
+        const expenseData = { ...body, user_id: session?.user?.id };
+        const { data, error } = await supabase.from('expenses').insert(expenseData);
+        if (error) throw error;
+        return data;
+      }
     }
+  } catch (err) {
+    console.error("API Error:", err);
+    throw err;
   }
+}
 
-  // 3. YOUR EXISTING BOOT/LOGIN LOGIC
-  function boot() { /* Your existing code */ }
-  window.addEventListener('DOMContentLoaded', () => {
-    // Your existing init code
-  });
+// 3. LOGIN FUNCTION
+// Call this function from your login button/form
+async function login(email, password) {
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    alert("Login failed: " + error.message);
+  } else {
+    console.log("Logged in successfully!");
+    location.reload(); // Refresh the page to load your expenses
+  }
+}
 </script>
-</body>
-</html>

@@ -1,3 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Xpend — Daily Tracker</title>
+<link rel="manifest" href="/manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { --bg0:#07090f; --t0:#eef2ff; }
+  body { background: var(--bg0); color: var(--t0); font-family: sans-serif; padding: 20px; }
+  #login-form { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; max-width: 300px; }
+  input { padding: 10px; border-radius: 5px; border: 1px solid #333; }
+  button { padding: 10px; background: #4f46e5; color: white; border: none; border-radius: 5px; cursor: pointer; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <h1>Xpend Tracker</h1>
+  <div id="login-form">
+    <input type="email" id="email-input" placeholder="Enter your email">
+    <input type="password" id="password-input" placeholder="Enter your password">
+    <button onclick="handleLogin()">Sign In</button>
+  </div>
+</div>
+
 <script>
 // 1. INITIALIZE SUPABASE
 const SUPABASE_URL = 'https://fydijvhjvukyrqcxacau.supabase.co';
@@ -29,22 +56,32 @@ async function api(method, path, body) {
   }
 }
 
-// 3. LOGIN FUNCTION
-async function login(email, password) {
+// 3. LOGIN LOGIC
+async function handleLogin() {
+  const email = document.getElementById('email-input').value;
+  const password = document.getElementById('password-input').value;
+  
+  console.log("Attempting login for:", email);
+  
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  
   if (error) {
+    console.error("Login failed:", error.message);
     alert("Login failed: " + error.message);
   } else {
     console.log("Logged in successfully!");
     location.reload(); 
   }
 }
-</script>
 
-<div id="login-form" style="margin-top: 20px;">
-  <input type="email" id="email-input" placeholder="Enter your email">
-  <input type="password" id="password-input" placeholder="Enter your password">
-  <button onclick="login(document.getElementById('email-input').value, document.getElementById('password-input').value)">
-    Sign In
-  </button>
-</div>
+// 4. CHECK AUTH ON LOAD
+window.addEventListener('DOMContentLoaded', async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    console.log("User is logged in. Loading data...");
+    // Hide login form or show your dashboard here
+  }
+});
+</script>
+</body>
+</html>

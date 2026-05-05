@@ -5,22 +5,18 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // 2. SECURE API BRIDGE
-// This function now automatically attaches your user_id to any new expenses,
-// satisfying your Row Level Security (RLS) policies.
 async function api(method, path, body) {
   try {
     const { data: { session } } = await supabase.auth.getSession();
     
     if (path === '/api/expenses') {
       if (method === 'GET') {
-        // Supabase RLS automatically filters results to only show YOUR data
         const { data, error } = await supabase.from('expenses').select('*');
         if (error) throw error;
         return data;
       }
       
       if (method === 'POST') {
-        // We inject the user_id from the session to ensure RLS allows the insert
         const expenseData = { ...body, user_id: session?.user?.id };
         const { data, error } = await supabase.from('expenses').insert(expenseData);
         if (error) throw error;
@@ -34,14 +30,21 @@ async function api(method, path, body) {
 }
 
 // 3. LOGIN FUNCTION
-// Call this function from your login button/form
 async function login(email, password) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) {
     alert("Login failed: " + error.message);
   } else {
     console.log("Logged in successfully!");
-    location.reload(); // Refresh the page to load your expenses
+    location.reload(); 
   }
 }
 </script>
+
+<div id="login-form" style="margin-top: 20px;">
+  <input type="email" id="email-input" placeholder="Enter your email">
+  <input type="password" id="password-input" placeholder="Enter your password">
+  <button onclick="login(document.getElementById('email-input').value, document.getElementById('password-input').value)">
+    Sign In
+  </button>
+</div>

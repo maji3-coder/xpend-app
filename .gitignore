@@ -1,0 +1,12 @@
+# Ignore Environment Variables
+.env
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore Node.js / Docker folders (if you add them later)
+node_modules/
+dist/
+build/
+docker-compose.override.yml

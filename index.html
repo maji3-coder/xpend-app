@@ -378,23 +378,17 @@ async function doLogin() {
     const email = `${username}@xpend.local`;
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     if (error) throw error;
-    S.session = data.session;
-    await loadProfile();
-    await boot();
+    // ✅ Do NOT call boot() here — onAuthStateChange('SIGNED_IN') handles it.
+    // Calling boot() here AND there causes a double-init crash.
   } catch (e) {
     toast(e.message === 'Invalid login credentials' ? 'Invalid username or password' : e.message, 'err');
-  } finally {
     setBtn('login-btn', false, 'Sign In →');
   }
 }
 
 async function doLogout() {
   await sb.auth.signOut();
-  S.session = null; S.profile = null;
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('lin-user').value = '';
-  document.getElementById('lin-pass').value = '';
+  // UI cleanup is handled by onAuthStateChange('SIGNED_OUT')
 }
 
 async function loadProfile() {
@@ -441,7 +435,7 @@ async function loadAll() {
 
   S.expenses = expRes.data  || [];
   S.budgets  = budRes.data  || [];
-  S.incoming = (incRes.data || []).map(r => ({ ...r, from_username: r.from_profile?.username, ...r.expenses }));
+  S.incoming = (incRes.data || []).map(r => ({ ...r, from_username: r.from_profile?.username }));
   S.outgoing = (outRes.data || []).map(r => ({ ...r, to_username: r.to_profile?.username }));
   S.users    = (usrRes.data || []).filter(u => u.role !== 'admin');
 
@@ -748,10 +742,22 @@ async function respond(id, status) {
 //  SESSION RESTORE
 // ═══════════════════════════════════════════════════════
 sb.auth.onAuthStateChange(async (event, session) => {
-  if (session && event === 'SIGNED_IN') {
+  if (event === 'SIGNED_IN' && session) {
     S.session = session;
     await loadProfile();
-    if (S.profile) await boot();
+    if (S.profile) {
+      await boot();
+    } else {
+      toast('Profile not found. Ask admin to create your profile in Supabase.', 'err');
+      await sb.auth.signOut();
+    }
+    setBtn('login-btn', false, 'Sign In →');
+  } else if (event === 'SIGNED_OUT') {
+    S.session = null; S.profile = null;
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('lin-user').value = '';
+    document.getElementById('lin-pass').value = '';
   }
 });
 

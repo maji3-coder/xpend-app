@@ -2,7 +2,7 @@
   "name": "Xpend — Expenditure Tracker",
   "short_name": "Xpend",
   "description": "Track daily expenses, manage budgets, and share costs",
-  "start_url": "/",
+  "start_url": "/xpend-app/",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#07090f",
